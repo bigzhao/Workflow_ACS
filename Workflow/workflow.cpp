@@ -261,40 +261,17 @@ int main() {
 	struct ant best_ant;     // 最优秀蚂蚁
 	struct node *nodes = NULL;
 	double time_constraint, tau0, max_cost, min_cost, min_makespan;
-	int nodes_length, i, j, iter, best_ant_index;
+	int nodes_length, i, iter, best_ant_index;
 
 
-	nodes = read_data("j1201_1.txt", &nodes_length, &time_constraint);
-	//for (i = 0; i < nodes_length; i++) {
-	//	printf("id: %d\n", nodes[i].id);
-	//	for (j = 0; j < nodes[i].num_instances; j++) {
-	//		printf("instance id:%d %lf %lf %lf\n", nodes[i].instances[j].id, nodes[i].instances[j].reliability, nodes[i].instances[j].time, nodes[i].instances[j].cost);
-	//	}
-	//	printf("\n");
-	//}
-	//for (i = 0; i < nodes_length; i++) {
-	//if (nodes[0].pred == NULL) {
-	//	j = 100;
-	//}
-	//else
-	//	j = nodes[0].pred->id;
-	//printf("%d", nodes[0].succ->id);
-	//printf("%d %d %d", nodes[6].num_pred, nodes[6].pred[0]->id, nodes[6].pred[1]->id);
-	
+	nodes = read_data("9.txt", &nodes_length, &time_constraint);
 	tau0 = calculate_tau0(nodes, nodes_length, &max_cost, &min_cost);
-	//printf("%lf", tau0);
 	min_makespan = calculate_est_and_best(nodes, nodes_length);
 	pheromone_initialize(nodes,nodes_length, tau0);  //tau0要怎么算？
 	ants_apply_memory(ants, nodes_length);
 	best_ant.solutions = (struct solution *)malloc(sizeof(struct solution) * nodes_length);
 	
 	for (iter = 0; iter < ITERATION; iter++) {
-		//printf("pheromone:");
-		//for (i = 0; i < nodes_length; i++) {
-		//	for (j = 0; j < nodes[i].num_instances; j++)
-		//		printf(" %lf ", nodes[i].instances[j].pheromone);
-		//	printf("\n");
-		//}
 		for (i = 0; i < POP; i++) {
 			solution_construction(ants + i, nodes, nodes_length, time_constraint, min_makespan);
 			time_evaluation(ants + i, nodes, nodes_length);
@@ -303,8 +280,6 @@ int main() {
 			local_update_pheromone(&ants[i], tau0, nodes_length);
 
 		}
-		//ants[0].solutions[0].inst->pheromone = 0;
-		//printf("asdadadad:%lf\n", ants[0].solutions[0].inst->pheromone);
 
 		best_ant_index = find_the_best_ant(ants);
 		if (iter == 0 || best_ant.score < ants[best_ant_index].score) {
@@ -322,10 +297,6 @@ int main() {
 	for (i = 0; i < nodes_length; i++) {
 		printf("%d:%d %lf %lf %lf\n", i, best_ant.solutions[i].inst->id, best_ant.solutions[i].inst->time, best_ant.solutions[i].st, best_ant.solutions[i].ct);
 	}
-	//printf("makespan: %lf, cost: %lf\n", ants[best_ant_index].makespan, ants[best_ant_index].cost);
-	//for (i = 0; i < nodes_length; i++) {
-	//	printf("%d:%d %lf %lf %lf\n", i, ants[best_ant_index].solutions[i].inst->id, ants[best_ant_index].solutions[i].inst->time, ants[best_ant_index].solutions[i].st, ants[best_ant_index].solutions[i].ct);
-	//}
 	free(best_ant.solutions);
 	free_memory(nodes, nodes_length, ants);
 	return 0;

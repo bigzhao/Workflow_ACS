@@ -36,6 +36,7 @@ struct node {
 	int num_instances;
 	int num_succ = 0;
 	int num_pred = 0;
+	int pred_len, succ_len;
 	int id;
 	double est;
 	double best;
@@ -125,6 +126,10 @@ void time_evaluation(struct ant *a, struct node *nodes, int nodes_length)
 	std::queue<struct node> ready_queue;
 	int i, max_index;
 	struct node operating_node;
+	int *push_on;    //记录队列状态，节点是否已经进队列
+
+	push_on = (int *)malloc(sizeof(int)* nodes_length);
+	memset(push_on, 0, sizeof(int)* nodes_length);
 
 	for (i = 0; i < nodes_length; i++) {
 		if (0 == nodes[i].num_pred)
@@ -147,8 +152,12 @@ void time_evaluation(struct ant *a, struct node *nodes, int nodes_length)
 
 		a->solutions[operating_node.id].ct = a->solutions[operating_node.id].st + a->solutions[operating_node.id].inst->time;
 		ready_queue.pop();
-		for (i = 0; i < operating_node.num_succ; i++)
-			ready_queue.push(*(operating_node.succ[i]));
+		for (i = 0; i < operating_node.num_succ; i++) {
+			if (0 == push_on[operating_node.succ[i]->id]) {
+				ready_queue.push(*(operating_node.succ[i]));
+				push_on[operating_node.succ[i]->id] = 1;
+			}
+		}
 		//operating_node.succ;
 		//}
 
@@ -182,7 +191,10 @@ void backward_time_evaluation(struct ant *a, struct node *nodes, int nodes_lengt
 	std::queue<struct node> ready_queue;
 	int i, max_index;
 	struct node operating_node;
+	int *push_on;    //记录队列状态，节点是否已经进队列
 
+	push_on = (int *)malloc(sizeof(int)* nodes_length);
+	memset(push_on, 0, sizeof(int)* nodes_length);
 	for (i = 0; i < nodes_length; i++) {
 		if (0 == nodes[i].num_succ)
 			ready_queue.push(nodes[i]);
@@ -204,8 +216,12 @@ void backward_time_evaluation(struct ant *a, struct node *nodes, int nodes_lengt
 
 		a->solutions[operating_node.id].ct = a->solutions[operating_node.id].st + a->solutions[operating_node.id].inst->time;
 		ready_queue.pop();
-		for (i = 0; i < operating_node.num_pred; i++)
-			ready_queue.push(*(operating_node.pred[i]));
+		for (i = 0; i < operating_node.num_pred; i++) {
+			if (0 == push_on[operating_node.pred[i]->id]) {
+				ready_queue.push(*(operating_node.pred[i]));
+				push_on[operating_node.pred[i]->id] = 1;
+			}
+		}
 		//operating_node.succ;
 		//}
 
@@ -257,6 +273,7 @@ struct node * read_data(char *file_name, int *num_nodes, double *time_constraint
 	int num_node, num_edges, i, j, temp, current, next;
 	int max_cost_index, min_cost_index, max_time_index, min_time_index;
 	double temp1;
+	void *new_ptr = NULL;
 	struct node *nodes;
 	fp = fopen(file_name, "r");
 	if (fp == NULL) {
@@ -270,15 +287,40 @@ struct node * read_data(char *file_name, int *num_nodes, double *time_constraint
 
 	for (i = 0; i < num_node; i++) {
 		nodes[i].id = i;
-		nodes[i].succ = (struct node**)malloc((num_node-1) * sizeof(struct node*));
-		nodes[i].pred = (struct node**)malloc((num_node - 1) * sizeof(struct node*));
+		//nodes[i].succ = (struct node**)malloc((num_node-1) * sizeof(struct node*));
+		//nodes[i].pred = (struct node**)malloc((num_node - 1) * sizeof(struct node*));
+		nodes[i].succ = (struct node**)malloc(1 * sizeof(struct node*));
+		nodes[i].pred = (struct node**)malloc(1 * sizeof(struct node*));
 		nodes[i].num_pred = 0;
 		nodes[i].num_succ = 0;
+		nodes[i].pred_len = 1;
+		nodes[i].succ_len = 1;
 	}
 	for (i = 0; i < num_edges; i++) {
 		fscanf(fp, "%d %d %d", &temp, &current, &next);
+		// 检查后继是否越界，如果是则realloc内存,为了方便每次扩大两倍 应该能够满足需求
+		while (nodes[current - 1].succ_len <= nodes[current - 1].num_succ) {
+			nodes[current - 1].succ_len *= 2;
+			new_ptr = realloc(nodes[current - 1].succ, sizeof(struct node *) * (nodes[current - 1].succ_len));
+			if (!new_ptr) {
+				fprintf(stderr, "succ realloc error!");
+				exit(-1);
+			}
+			nodes[current - 1].succ = (struct node **)new_ptr;
+		}
 		nodes[current - 1].succ[nodes[current - 1].num_succ] = &nodes[next - 1];
 		nodes[current - 1].num_succ++;
+
+		// 检查前驱是否越界，如果是则realloc内存,为了方便每次扩大两倍 应该能够满足需求
+		while (nodes[next - 1].pred_len <= nodes[next - 1].num_pred) {
+			nodes[next - 1].pred_len *= 2;
+			new_ptr = realloc(nodes[next - 1].pred, sizeof(struct node *) * nodes[next - 1].pred_len);
+			if (!new_ptr) {
+				fprintf(stderr, "pred realloc error!");
+				exit(-1);
+			}
+			nodes[next - 1].pred = (struct node **)new_ptr;
+		}
 		nodes[next - 1].pred[nodes[next - 1].num_pred] = &nodes[current - 1];
 		nodes[next - 1].num_pred++;
 	}
