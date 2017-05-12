@@ -85,6 +85,10 @@
   <ItemGroup>
     <ClCompile Include="workflow.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="9.txt" />
+    <Text Include="DNA.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
